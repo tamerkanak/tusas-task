@@ -1,0 +1,86 @@
+from __future__ import annotations
+
+from pathlib import Path
+from uuid import uuid4
+
+from fastapi import UploadFile
+
+from ..models import Document
+from ..repositories import DocumentRepository
+from ..schemas import AcceptedFile, DocumentSummary, RejectedFile, UploadResponse
+from .storage import FileStorageService
+
+
+class DocumentService:
+    def __init__(
+        self,
+        repository: DocumentRepository,
+        storage_service: FileStorageService,
+        allowed_extensions: set[str],
+    ) -> None:
+        self.repository = repository
+        self.storage_service = storage_service
+        self.allowed_extensions = {value.lower() for value in allowed_extensions}
+
+    async def upload_documents(self, files: list[UploadFile]) -> UploadResponse:
+        document_ids: list[str] = []
+        accepted_files: list[AcceptedFile] = []
+        rejected_files: list[RejectedFile] = []
+
+        for file in files:
+            filename = file.filename or "unknown"
+            suffix = Path(filename).suffix.lower()
+
+            if suffix not in self.allowed_extensions:
+                rejected_files.append(
+                    RejectedFile(filename=filename, reason="Desteklenmeyen dosya uzantisi")
+                )
+                continue
+
+            content = await file.read()
+            if not content:
+                rejected_files.append(RejectedFile(filename=filename, reason="Dosya bos"))
+                continue
+
+            document_id = uuid4().hex
+            saved = self.storage_service.save(document_id, filename, content)
+            document = Document(
+                id=document_id,
+                filename=filename,
+                file_type=suffix.lstrip("."),
+                mime_type=file.content_type or "application/octet-stream",
+                storage_path=str(saved.storage_path),
+                file_size=saved.file_size,
+                status="uploaded",
+                language="unknown",
+            )
+            self.repository.create(document)
+
+            document_ids.append(document_id)
+            accepted_files.append(
+                AcceptedFile(
+                    document_id=document_id,
+                    filename=filename,
+                    status=document.status,
+                )
+            )
+
+        return UploadResponse(
+            document_ids=document_ids,
+            accepted_files=accepted_files,
+            rejected_files=rejected_files,
+        )
+
+    def list_documents(self) -> list[DocumentSummary]:
+        records = self.repository.list_all()
+        return [
+            DocumentSummary(
+                id=record.id,
+                filename=record.filename,
+                file_type=record.file_type,
+                language=record.language,
+                status=record.status,
+                created_at=record.created_at,
+            )
+            for record in records
+        ]
