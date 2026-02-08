@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-import fitz
+from pypdf import PdfReader
 
 from .gemini import GeminiClient
 
@@ -36,27 +36,43 @@ class DocumentExtractor:
 
     def _extract_from_pdf(self, file_path: Path) -> list[ExtractedSegment]:
         segments: list[ExtractedSegment] = []
-        with fitz.open(file_path) as document:
-            for page_index in range(document.page_count):
-                page = document.load_page(page_index)
-                text = page.get_text("text").strip()
-                page_no = page_index + 1
+        reader = PdfReader(str(file_path))
 
-                if len(text) >= self.min_chars_before_ocr:
-                    segments.append(
-                        ExtractedSegment(page=page_no, source="native", text=text)
-                    )
-                    continue
+        for page_index, page in enumerate(reader.pages, start=1):
+            text = (page.extract_text() or "").strip()
+            if len(text) >= self.min_chars_before_ocr:
+                segments.append(ExtractedSegment(page=page_index, source="native", text=text))
+                continue
 
-                pixmap = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
-                image_bytes = pixmap.tobytes("png")
-                ocr_text = self.ai_client.extract_text_from_image(
-                    image_bytes=image_bytes,
-                    mime_type="image/png",
-                )
-                if ocr_text:
-                    segments.append(
-                        ExtractedSegment(page=page_no, source="ocr", text=ocr_text)
-                    )
+            image_payload = self._extract_page_image(page)
+            if image_payload is None:
+                continue
+
+            image_bytes, mime_type = image_payload
+            ocr_text = self.ai_client.extract_text_from_image(
+                image_bytes=image_bytes,
+                mime_type=mime_type,
+            )
+            if ocr_text:
+                segments.append(ExtractedSegment(page=page_index, source="ocr", text=ocr_text))
 
         return segments
+
+    def _extract_page_image(self, page) -> tuple[bytes, str] | None:
+        images = getattr(page, "images", None)
+        if not images:
+            return None
+
+        image_file = images[0]
+        image_name = getattr(image_file, "name", "") or ""
+        suffix = Path(image_name).suffix.lower()
+
+        mime_type = "image/png"
+        if suffix in {".jpg", ".jpeg"}:
+            mime_type = "image/jpeg"
+
+        data = getattr(image_file, "data", None)
+        if not data:
+            return None
+
+        return data, mime_type

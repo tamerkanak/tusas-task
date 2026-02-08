@@ -4,7 +4,6 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import UploadFile
-from langdetect import LangDetectException, detect
 
 from ..models import Document
 from ..repositories import ChunkRepository, DocumentRepository, SegmentRepository
@@ -13,7 +12,7 @@ from .chunking import ChunkBuilder
 from .extraction import DocumentExtractor
 from .gemini import GeminiClient
 from .storage import FileStorageService
-from .vector_store import ChromaVectorStore
+from .vector_store import VectorStoreProtocol
 
 
 class DocumentService:
@@ -25,7 +24,7 @@ class DocumentService:
         storage_service: FileStorageService,
         extractor: DocumentExtractor,
         chunk_builder: ChunkBuilder,
-        vector_store: ChromaVectorStore,
+        vector_store: VectorStoreProtocol,
         ai_client: GeminiClient,
         allowed_extensions: set[str],
     ) -> None:
@@ -143,15 +142,23 @@ class DocumentService:
 
     @staticmethod
     def _detect_language(text: str) -> str:
-        sample = text.strip()
-        if len(sample) < 20:
+        normalized = f" {text.lower()} "
+        if len(normalized.strip()) < 20:
             return "unknown"
 
-        try:
-            lang = detect(sample)
-        except LangDetectException:
+        turkish_tokens = [" ve ", " bir ", " icin ", " olarak ", " ile ", " de ", " da "]
+        english_tokens = [" the ", " and ", " for ", " with ", " this ", " that ", " is "]
+
+        turkish_score = sum(normalized.count(token) for token in turkish_tokens)
+        turkish_score += sum(normalized.count(char) for char in "cgisou")
+
+        english_score = sum(normalized.count(token) for token in english_tokens)
+
+        if turkish_score == 0 and english_score == 0:
             return "unknown"
 
-        if lang in {"tr", "en"}:
-            return lang
+        if turkish_score > english_score * 1.2:
+            return "tr"
+        if english_score > turkish_score * 1.2:
+            return "en"
         return "other"

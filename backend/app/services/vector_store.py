@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-
-import chromadb
-from chromadb.api.models.Collection import Collection
+from typing import Any, Protocol
 
 from .chunking import ChunkPayload
 
@@ -19,10 +17,25 @@ class RetrievedChunk:
     distance: float
 
 
+class VectorStoreProtocol(Protocol):
+    def upsert(self, chunks: list[ChunkPayload], embeddings: list[list[float]]) -> None: ...
+
+    def query(
+        self,
+        query_embedding: list[float],
+        document_ids: list[str],
+        top_k: int,
+    ) -> list[RetrievedChunk]: ...
+
+    def ping(self) -> bool: ...
+
+
 class ChromaVectorStore:
     def __init__(self, persist_dir: Path, collection_name: str = "document_chunks") -> None:
-        self.client = chromadb.PersistentClient(path=str(persist_dir))
-        self.collection: Collection = self.client.get_or_create_collection(
+        import chromadb
+
+        self.client: Any = chromadb.PersistentClient(path=str(persist_dir))
+        self.collection: Any = self.client.get_or_create_collection(
             name=collection_name,
             metadata={"hnsw:space": "cosine"},
         )
@@ -95,3 +108,22 @@ class ChromaVectorStore:
             return True
         except Exception:
             return False
+
+
+class UnavailableVectorStore:
+    def __init__(self, reason: str) -> None:
+        self.reason = reason
+
+    def upsert(self, chunks: list[ChunkPayload], embeddings: list[list[float]]) -> None:
+        raise RuntimeError(self.reason)
+
+    def query(
+        self,
+        query_embedding: list[float],
+        document_ids: list[str],
+        top_k: int,
+    ) -> list[RetrievedChunk]:
+        raise RuntimeError(self.reason)
+
+    def ping(self) -> bool:
+        return False

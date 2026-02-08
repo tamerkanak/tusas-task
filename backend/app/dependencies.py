@@ -14,7 +14,7 @@ from .services.extraction import DocumentExtractor
 from .services.gemini import GeminiClient, MissingApiKeyError
 from .services.qa import QAService
 from .services.storage import FileStorageService
-from .services.vector_store import ChromaVectorStore
+from .services.vector_store import VectorStoreProtocol
 
 
 def get_settings(request: Request) -> Settings:
@@ -29,7 +29,7 @@ def get_storage_service(request: Request) -> FileStorageService:
     return request.app.state.storage_service
 
 
-def get_vector_store(request: Request) -> ChromaVectorStore:
+def get_vector_store(request: Request) -> VectorStoreProtocol:
     return request.app.state.vector_store
 
 
@@ -94,7 +94,7 @@ def get_document_service(
     storage_service: FileStorageService = Depends(get_storage_service),
     extractor: DocumentExtractor = Depends(get_document_extractor),
     chunk_builder: ChunkBuilder = Depends(get_chunk_builder),
-    vector_store: ChromaVectorStore = Depends(get_vector_store),
+    vector_store: VectorStoreProtocol = Depends(get_vector_store),
     ai_client: GeminiClient = Depends(get_gemini_client),
     settings: Settings = Depends(get_settings),
 ) -> DocumentService:
@@ -113,7 +113,7 @@ def get_document_service(
 
 def get_qa_service(
     repository: DocumentRepository = Depends(get_document_repository),
-    vector_store: ChromaVectorStore = Depends(get_vector_store),
+    vector_store: VectorStoreProtocol = Depends(get_vector_store),
     ai_client: GeminiClient = Depends(get_gemini_client),
     settings: Settings = Depends(get_settings),
 ) -> QAService:

@@ -5,7 +5,7 @@ from statistics import mean
 from ..repositories import DocumentRepository
 from ..schemas import AskResponse, Citation
 from .gemini import GeminiClient
-from .vector_store import ChromaVectorStore, RetrievedChunk
+from .vector_store import RetrievedChunk, VectorStoreProtocol
 
 
 class QAService:
@@ -14,7 +14,7 @@ class QAService:
     def __init__(
         self,
         document_repository: DocumentRepository,
-        vector_store: ChromaVectorStore,
+        vector_store: VectorStoreProtocol,
         ai_client: GeminiClient,
         retrieval_max_distance: float,
     ) -> None:

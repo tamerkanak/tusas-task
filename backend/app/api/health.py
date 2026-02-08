@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session, get_settings, get_vector_store
 from ..schemas import HealthResponse
-from ..services.vector_store import ChromaVectorStore
+from ..services.vector_store import VectorStoreProtocol
 
 router = APIRouter(tags=["health"])
 
@@ -15,7 +15,7 @@ router = APIRouter(tags=["health"])
 def health(
     session: Session = Depends(get_db_session),
     settings=Depends(get_settings),
-    vector_store: ChromaVectorStore = Depends(get_vector_store),
+    vector_store: VectorStoreProtocol = Depends(get_vector_store),
 ) -> HealthResponse:
     status = "ok"
     services = {
