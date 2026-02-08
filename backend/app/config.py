@@ -13,6 +13,9 @@ class Settings:
     data_dir: Path
     upload_dir: Path
     database_path: Path
+    gemini_api_key: str | None
+    gemini_model: str
+    pdf_min_chars_before_ocr: int
 
     @property
     def database_url(self) -> str:
@@ -37,6 +40,9 @@ class Settings:
             data_dir=data_dir,
             upload_dir=upload_dir,
             database_path=database_path,
+            gemini_api_key=(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
+            gemini_model=os.getenv("GEMINI_MODEL", "gemini-1.5-flash"),
+            pdf_min_chars_before_ocr=int(os.getenv("PDF_MIN_CHARS_BEFORE_OCR", "40")),
         )
 
     def ensure_directories(self) -> None:

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
 
@@ -25,3 +25,29 @@ class Document(Base):
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
+    segments: Mapped[list["DocumentSegment"]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+    )
+
+
+class DocumentSegment(Base):
+    __tablename__ = "document_segments"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    document_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        index=True,
+    )
+    page: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source: Mapped[str] = mapped_column(String(16), nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    document: Mapped[Document] = relationship(back_populates="segments")

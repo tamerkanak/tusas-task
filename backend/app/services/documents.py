@@ -4,10 +4,12 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import UploadFile
+from langdetect import LangDetectException, detect
 
 from ..models import Document
-from ..repositories import DocumentRepository
+from ..repositories import DocumentRepository, SegmentRepository
 from ..schemas import AcceptedFile, DocumentSummary, RejectedFile, UploadResponse
+from .extraction import DocumentExtractor
 from .storage import FileStorageService
 
 
@@ -15,11 +17,15 @@ class DocumentService:
     def __init__(
         self,
         repository: DocumentRepository,
+        segment_repository: SegmentRepository,
         storage_service: FileStorageService,
+        extractor: DocumentExtractor,
         allowed_extensions: set[str],
     ) -> None:
         self.repository = repository
+        self.segment_repository = segment_repository
         self.storage_service = storage_service
+        self.extractor = extractor
         self.allowed_extensions = {value.lower() for value in allowed_extensions}
 
     async def upload_documents(self, files: list[UploadFile]) -> UploadResponse:
@@ -51,19 +57,43 @@ class DocumentService:
                 mime_type=file.content_type or "application/octet-stream",
                 storage_path=str(saved.storage_path),
                 file_size=saved.file_size,
-                status="uploaded",
+                status="processing",
                 language="unknown",
             )
             self.repository.create(document)
 
-            document_ids.append(document_id)
-            accepted_files.append(
-                AcceptedFile(
-                    document_id=document_id,
-                    filename=filename,
-                    status=document.status,
+            try:
+                segments = self.extractor.extract(saved.storage_path, document.file_type)
+                if not segments:
+                    raise ValueError("Metin cikarimi basarisiz")
+
+                self.segment_repository.replace_for_document(document_id, segments)
+                full_text = "\n".join(segment.text for segment in segments)
+                language = self._detect_language(full_text)
+                self.repository.update_status(
+                    document_id,
+                    status="extracted",
+                    language=language,
+                    error_message=None,
                 )
-            )
+
+                document_ids.append(document_id)
+                accepted_files.append(
+                    AcceptedFile(
+                        document_id=document_id,
+                        filename=filename,
+                        status="extracted",
+                    )
+                )
+            except Exception as exc:
+                self.repository.update_status(
+                    document_id,
+                    status="failed",
+                    error_message=str(exc),
+                )
+                rejected_files.append(
+                    RejectedFile(filename=filename, reason=f"Isleme hatasi: {exc}")
+                )
 
         return UploadResponse(
             document_ids=document_ids,
@@ -84,3 +114,18 @@ class DocumentService:
             )
             for record in records
         ]
+
+    @staticmethod
+    def _detect_language(text: str) -> str:
+        sample = text.strip()
+        if len(sample) < 20:
+            return "unknown"
+
+        try:
+            lang = detect(sample)
+        except LangDetectException:
+            return "unknown"
+
+        if lang in {"tr", "en"}:
+            return lang
+        return "other"
