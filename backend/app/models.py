@@ -30,6 +30,10 @@ class Document(Base):
         back_populates="document",
         cascade="all, delete-orphan",
     )
+    chunks: Mapped[list["DocumentChunk"]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+    )
 
 
 class DocumentSegment(Base):
@@ -51,3 +55,25 @@ class DocumentSegment(Base):
     )
 
     document: Mapped[Document] = relationship(back_populates="segments")
+
+
+class DocumentChunk(Base):
+    __tablename__ = "document_chunks"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    document_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        index=True,
+    )
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    page: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    char_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    document: Mapped[Document] = relationship(back_populates="chunks")

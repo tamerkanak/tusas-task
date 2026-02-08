@@ -7,10 +7,13 @@ from fastapi import UploadFile
 from langdetect import LangDetectException, detect
 
 from ..models import Document
-from ..repositories import DocumentRepository, SegmentRepository
+from ..repositories import ChunkRepository, DocumentRepository, SegmentRepository
 from ..schemas import AcceptedFile, DocumentSummary, RejectedFile, UploadResponse
+from .chunking import ChunkBuilder
 from .extraction import DocumentExtractor
+from .gemini import GeminiClient
 from .storage import FileStorageService
+from .vector_store import ChromaVectorStore
 
 
 class DocumentService:
@@ -18,14 +21,22 @@ class DocumentService:
         self,
         repository: DocumentRepository,
         segment_repository: SegmentRepository,
+        chunk_repository: ChunkRepository,
         storage_service: FileStorageService,
         extractor: DocumentExtractor,
+        chunk_builder: ChunkBuilder,
+        vector_store: ChromaVectorStore,
+        ai_client: GeminiClient,
         allowed_extensions: set[str],
     ) -> None:
         self.repository = repository
         self.segment_repository = segment_repository
+        self.chunk_repository = chunk_repository
         self.storage_service = storage_service
         self.extractor = extractor
+        self.chunk_builder = chunk_builder
+        self.vector_store = vector_store
+        self.ai_client = ai_client
         self.allowed_extensions = {value.lower() for value in allowed_extensions}
 
     async def upload_documents(self, files: list[UploadFile]) -> UploadResponse:
@@ -68,11 +79,26 @@ class DocumentService:
                     raise ValueError("Metin cikarimi basarisiz")
 
                 self.segment_repository.replace_for_document(document_id, segments)
+                chunks = self.chunk_builder.build(
+                    document_id=document_id,
+                    filename=filename,
+                    segments=segments,
+                )
+                if not chunks:
+                    raise ValueError("Chunk olusturulamadi")
+
+                embeddings = self.ai_client.embed_texts(
+                    [chunk.text for chunk in chunks],
+                    task_type="retrieval_document",
+                )
+                self.chunk_repository.replace_for_document(document_id, chunks)
+                self.vector_store.upsert(chunks, embeddings)
+
                 full_text = "\n".join(segment.text for segment in segments)
                 language = self._detect_language(full_text)
                 self.repository.update_status(
                     document_id,
-                    status="extracted",
+                    status="indexed",
                     language=language,
                     error_message=None,
                 )
@@ -82,7 +108,7 @@ class DocumentService:
                     AcceptedFile(
                         document_id=document_id,
                         filename=filename,
-                        status="extracted",
+                        status="indexed",
                     )
                 )
             except Exception as exc:

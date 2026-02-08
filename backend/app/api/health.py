@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from ..dependencies import get_db_session, get_settings
+from ..dependencies import get_db_session, get_settings, get_vector_store
 from ..schemas import HealthResponse
+from ..services.vector_store import ChromaVectorStore
 
 router = APIRouter(tags=["health"])
 
@@ -14,11 +15,12 @@ router = APIRouter(tags=["health"])
 def health(
     session: Session = Depends(get_db_session),
     settings=Depends(get_settings),
+    vector_store: ChromaVectorStore = Depends(get_vector_store),
 ) -> HealthResponse:
     status = "ok"
     services = {
         "database": "ok",
-        "vector_store": "bootstrapping",
+        "vector_store": "ok" if vector_store.ping() else "down",
         "gemini": "ok" if settings.gemini_api_key else "missing_api_key",
     }
 
@@ -27,5 +29,8 @@ def health(
     except Exception:
         status = "degraded"
         services["database"] = "down"
+
+    if services["vector_store"] != "ok":
+        status = "degraded"
 
     return HealthResponse(status=status, services=services)

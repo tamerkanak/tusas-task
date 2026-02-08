@@ -5,7 +5,8 @@ from uuid import uuid4
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from .models import Document, DocumentSegment
+from .models import Document, DocumentChunk, DocumentSegment
+from .services.chunking import ChunkPayload
 from .services.extraction import ExtractedSegment
 
 
@@ -70,4 +71,32 @@ class SegmentRepository:
 
     def list_for_document(self, document_id: str) -> list[DocumentSegment]:
         statement = select(DocumentSegment).where(DocumentSegment.document_id == document_id)
+        return list(self.session.scalars(statement))
+
+
+class ChunkRepository:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def replace_for_document(self, document_id: str, chunks: list[ChunkPayload]) -> None:
+        self.session.execute(
+            delete(DocumentChunk).where(DocumentChunk.document_id == document_id)
+        )
+        for chunk in chunks:
+            self.session.add(
+                DocumentChunk(
+                    id=chunk.id,
+                    document_id=chunk.document_id,
+                    chunk_index=chunk.chunk_index,
+                    page=chunk.page,
+                    text=chunk.text,
+                    char_count=len(chunk.text),
+                )
+            )
+        self.session.commit()
+
+    def list_for_documents(self, document_ids: list[str]) -> list[DocumentChunk]:
+        if not document_ids:
+            return []
+        statement = select(DocumentChunk).where(DocumentChunk.document_id.in_(document_ids))
         return list(self.session.scalars(statement))

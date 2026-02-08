@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -52,7 +53,7 @@ class Citation(BaseModel):
 
 class AskResponse(BaseModel):
     answer: str
-    mode: str
+    mode: Literal["grounded_answer", "no_evidence"]
     citations: list[Citation]
     confidence: float
     used_chunks: int

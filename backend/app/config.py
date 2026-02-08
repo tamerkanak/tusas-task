@@ -12,10 +12,15 @@ class Settings:
     api_prefix: str
     data_dir: Path
     upload_dir: Path
+    chroma_dir: Path
     database_path: Path
     gemini_api_key: str | None
     gemini_model: str
+    gemini_embedding_model: str
     pdf_min_chars_before_ocr: int
+    chunk_size: int
+    chunk_overlap: int
+    retrieval_max_distance: float
 
     @property
     def database_url(self) -> str:
@@ -31,6 +36,7 @@ class Settings:
         backend_dir = root_dir / "backend"
         data_dir = Path(os.getenv("APP_DATA_DIR", backend_dir / "data")).resolve()
         upload_dir = Path(os.getenv("APP_UPLOAD_DIR", data_dir / "uploads")).resolve()
+        chroma_dir = Path(os.getenv("APP_CHROMA_DIR", data_dir / "chroma")).resolve()
         database_path = Path(os.getenv("APP_DB_PATH", data_dir / "app.db")).resolve()
 
         return cls(
@@ -39,12 +45,20 @@ class Settings:
             api_prefix="/api",
             data_dir=data_dir,
             upload_dir=upload_dir,
+            chroma_dir=chroma_dir,
             database_path=database_path,
             gemini_api_key=(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
             gemini_model=os.getenv("GEMINI_MODEL", "gemini-1.5-flash"),
+            gemini_embedding_model=os.getenv(
+                "GEMINI_EMBED_MODEL", "models/text-embedding-004"
+            ),
             pdf_min_chars_before_ocr=int(os.getenv("PDF_MIN_CHARS_BEFORE_OCR", "40")),
+            chunk_size=int(os.getenv("CHUNK_SIZE", "900")),
+            chunk_overlap=int(os.getenv("CHUNK_OVERLAP", "180")),
+            retrieval_max_distance=float(os.getenv("RETRIEVAL_MAX_DISTANCE", "0.45")),
         )
 
     def ensure_directories(self) -> None:
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.upload_dir.mkdir(parents=True, exist_ok=True)
+        self.chroma_dir.mkdir(parents=True, exist_ok=True)
