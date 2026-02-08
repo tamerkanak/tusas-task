@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 from statistics import mean
 
 from ..repositories import DocumentRepository
 from ..schemas import AskResponse, Citation
 from .gemini import GeminiClient
 from .vector_store import RetrievedChunk, VectorStoreProtocol
+
+logger = logging.getLogger(__name__)
 
 
 class QAService:
@@ -28,6 +31,7 @@ class QAService:
         indexed_docs = {document.id: document for document in documents if document.status == "indexed"}
 
         if not indexed_docs:
+            logger.info("QA no_evidence: indexed belge bulunamadi")
             return self._no_evidence_response()
 
         query_embedding = self.ai_client.embed_texts(
@@ -45,6 +49,7 @@ class QAService:
         ][:top_k]
 
         if not filtered_chunks:
+            logger.info("QA no_evidence: retrieval sonucu esik altinda")
             return self._no_evidence_response()
 
         context_items = []
@@ -79,9 +84,11 @@ class QAService:
         citations = [citation_map[cid] for cid in selected_ids if cid in citation_map]
 
         if not citations or not answer:
+            logger.info("QA no_evidence: citation veya cevap bos")
             return self._no_evidence_response(used_chunks=len(filtered_chunks))
 
         if answer.lower() == self.NO_EVIDENCE_ANSWER.lower():
+            logger.info("QA no_evidence: model baglam disi oldugunu bildirdi")
             return self._no_evidence_response(used_chunks=len(filtered_chunks))
 
         confidence = self._calculate_confidence(filtered_chunks, citations)

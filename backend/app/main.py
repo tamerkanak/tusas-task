@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI
 
 from . import models
@@ -17,6 +19,14 @@ from .services.vector_store import (
 )
 
 
+def configure_logging(environment: str) -> None:
+    level = logging.DEBUG if environment == "development" else logging.INFO
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    )
+
+
 def create_app(
     settings: Settings | None = None,
     *,
@@ -25,6 +35,7 @@ def create_app(
 ) -> FastAPI:
     settings = settings or Settings.from_env()
     settings.ensure_directories()
+    configure_logging(settings.environment)
 
     database = Database(settings.database_url)
     database.init_schema()

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from uuid import uuid4
 
@@ -13,6 +14,8 @@ from .extraction import DocumentExtractor
 from .gemini import GeminiClient
 from .storage import FileStorageService
 from .vector_store import VectorStoreProtocol
+
+logger = logging.getLogger(__name__)
 
 
 class DocumentService:
@@ -60,6 +63,7 @@ class DocumentService:
 
             document_id = uuid4().hex
             saved = self.storage_service.save(document_id, filename, content)
+            logger.info("Dosya kaydedildi: %s (%s)", filename, document_id)
             document = Document(
                 id=document_id,
                 filename=filename,
@@ -101,6 +105,7 @@ class DocumentService:
                     language=language,
                     error_message=None,
                 )
+                logger.info("Belge indexlendi: %s (%s)", filename, document_id)
 
                 document_ids.append(document_id)
                 accepted_files.append(
@@ -111,6 +116,7 @@ class DocumentService:
                     )
                 )
             except Exception as exc:
+                logger.exception("Belge isleme hatasi: %s (%s)", filename, document_id)
                 self.repository.update_status(
                     document_id,
                     status="failed",
