@@ -1,0 +1,23 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Runtime data
+backend/data/
+backend/.env
+.env
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# OS/IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local-only demo materials (explicitly not committed)
+local_demo/
