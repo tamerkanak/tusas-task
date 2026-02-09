@@ -15,6 +15,7 @@ from .services.gemini import GeminiClient
 from .services.storage import FileStorageService
 from .services.vector_store import (
     ChromaVectorStore,
+    LocalJsonVectorStore,
     UnavailableVectorStore,
     VectorStoreProtocol,
 )
@@ -61,7 +62,16 @@ def create_app(
         try:
             app.state.vector_store = ChromaVectorStore(settings.chroma_dir)
         except Exception as exc:
-            app.state.vector_store = UnavailableVectorStore(str(exc))
+            logging.getLogger(__name__).warning(
+                "Chroma kullanilamadi, LocalJsonVectorStore devreye alindi: %s",
+                exc,
+            )
+            try:
+                app.state.vector_store = LocalJsonVectorStore(
+                    settings.data_dir / "local_vectors.json"
+                )
+            except Exception as inner_exc:
+                app.state.vector_store = UnavailableVectorStore(str(inner_exc))
     if gemini_client is not None:
         app.state.gemini_client = gemini_client
 

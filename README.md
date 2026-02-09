@@ -7,7 +7,7 @@ Bu proje, TUSAS case study isterleri dogrultusunda PDF/JPG/PNG belgelerini yukle
 - PDF, JPG, PNG belge yukleme
 - PDF icin native metin cikarimi ve gerekirse OCR fallback
 - Gorseller icin Gemini tabanli OCR
-- Chunk tabanli indeksleme ve Chroma vector store
+- Chunk tabanli indeksleme ve vector store (Chroma + otomatik local fallback)
 - Gemini ile grounded soru-cevap
 - Citation zorunlulugu ve no-evidence davranisi
 - FastAPI backend + React frontend
@@ -16,7 +16,7 @@ Bu proje, TUSAS case study isterleri dogrultusunda PDF/JPG/PNG belgelerini yukle
 
 - Backend: FastAPI, SQLAlchemy, SQLite
 - AI: Gemini (OCR, embedding, QA)
-- Vector DB: Chroma (persistent)
+- Vector DB: Chroma (persistent), hata durumunda Local JSON fallback
 - Frontend: React + Vite + TypeScript
 - Test: Pytest + mock Gemini/vector store
 
@@ -38,6 +38,10 @@ Bu proje, TUSAS case study isterleri dogrultusunda PDF/JPG/PNG belgelerini yukle
 Zorunlu:
 
 - `GEMINI_API_KEY`
+
+Opsiyonel ama onemli:
+
+- `GEMINI_USE_SYSTEM_PROXY=false` (varsayilan). Sistem proxy'si hataliysa Gemini baglantisini korur.
 
 ### 2) Backend
 

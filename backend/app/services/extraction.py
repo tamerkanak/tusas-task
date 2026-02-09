@@ -56,6 +56,15 @@ class DocumentExtractor:
             if ocr_text:
                 segments.append(ExtractedSegment(page=page_index, source="ocr", text=ocr_text))
 
+        if segments:
+            return segments
+
+        # Some PDFs contain no extractable text or page images for pypdf;
+        # in that case ask Gemini to parse the raw PDF bytes directly.
+        pdf_text = self.ai_client.extract_text_from_pdf(file_path.read_bytes())
+        if pdf_text:
+            segments.append(ExtractedSegment(page=None, source="ocr_pdf", text=pdf_text))
+
         return segments
 
     def _extract_page_image(self, page) -> tuple[bytes, str] | None:

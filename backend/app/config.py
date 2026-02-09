@@ -17,6 +17,7 @@ class Settings:
     gemini_api_key: str | None
     gemini_model: str
     gemini_embedding_model: str
+    gemini_use_system_proxy: bool
     pdf_min_chars_before_ocr: int
     chunk_size: int
     chunk_overlap: int
@@ -52,6 +53,10 @@ class Settings:
             gemini_embedding_model=os.getenv(
                 "GEMINI_EMBED_MODEL", "models/text-embedding-004"
             ),
+            gemini_use_system_proxy=_read_bool(
+                os.getenv("GEMINI_USE_SYSTEM_PROXY"),
+                default=False,
+            ),
             pdf_min_chars_before_ocr=int(os.getenv("PDF_MIN_CHARS_BEFORE_OCR", "40")),
             chunk_size=int(os.getenv("CHUNK_SIZE", "900")),
             chunk_overlap=int(os.getenv("CHUNK_OVERLAP", "180")),
@@ -62,3 +67,11 @@ class Settings:
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.upload_dir.mkdir(parents=True, exist_ok=True)
         self.chroma_dir.mkdir(parents=True, exist_ok=True)
+
+
+def _read_bool(raw_value: str | None, *, default: bool) -> bool:
+    if raw_value is None:
+        return default
+
+    normalized = raw_value.strip().lower()
+    return normalized in {"1", "true", "yes", "on"}

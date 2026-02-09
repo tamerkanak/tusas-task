@@ -65,6 +65,7 @@ def get_gemini_client(request: Request, settings: Settings = Depends(get_setting
             api_key=settings.gemini_api_key or "",
             model_name=settings.gemini_model,
             embedding_model=settings.gemini_embedding_model,
+            use_system_proxy=settings.gemini_use_system_proxy,
         )
     except MissingApiKeyError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

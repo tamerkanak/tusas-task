@@ -101,6 +101,7 @@ def test_missing_api_key_fails_fast_on_upload(tmp_path) -> None:
         gemini_api_key=None,
         gemini_model="gemini-test",
         gemini_embedding_model="models/text-embedding-004",
+        gemini_use_system_proxy=False,
         pdf_min_chars_before_ocr=20,
         chunk_size=220,
         chunk_overlap=40,
