@@ -49,9 +49,9 @@ class Settings:
             chroma_dir=chroma_dir,
             database_path=database_path,
             gemini_api_key=(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
-            gemini_model=os.getenv("GEMINI_MODEL", "gemini-1.5-flash"),
+            gemini_model=os.getenv("GEMINI_MODEL", "gemini-2.5-pro"),
             gemini_embedding_model=os.getenv(
-                "GEMINI_EMBED_MODEL", "models/text-embedding-004"
+                "GEMINI_EMBED_MODEL", "gemini-embedding-001"
             ),
             gemini_use_system_proxy=_read_bool(
                 os.getenv("GEMINI_USE_SYSTEM_PROXY"),
