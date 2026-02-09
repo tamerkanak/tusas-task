@@ -42,7 +42,7 @@ Zorunlu:
 Opsiyonel ama onemli:
 
 - `GEMINI_USE_SYSTEM_PROXY=false` (varsayilan). Sistem proxy'si hataliysa Gemini baglantisini korur.
-- `GEMINI_MODEL=gemini-2.5-pro` (onerilen kalite odakli varsayilan)
+- `GEMINI_MODEL=gemini-3-flash-preview` (Gemini 3 Flash kullanimi)
 - `GEMINI_EMBED_MODEL=gemini-embedding-001` (onerilen embedding modeli)
 
 ### 2) Backend
