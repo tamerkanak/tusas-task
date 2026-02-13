@@ -37,6 +37,8 @@ Bu proje, TUSAS case study isterleri dogrultusunda PDF/JPG/PNG belgelerini yukle
 
 `.env.example` dosyasini referans alin.
 
+Not: Backend, repo root'undaki `.env` dosyasini otomatik olarak yukler (varsa).
+
 Zorunlu:
 
 - `GEMINI_API_KEY`
