@@ -13,8 +13,10 @@ export function ChatInterface({ onAsk, isAsking, result, selectedDocCount }: Cha
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.trim() && !isAsking && selectedDocCount > 0) {
-      onAsk(input);
+    const question = input.trim();
+    if (question && !isAsking && selectedDocCount > 0) {
+      setInput("");
+      void onAsk(question);
     }
   };
 
