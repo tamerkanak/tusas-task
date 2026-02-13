@@ -30,6 +30,8 @@ class GeminiResponseParseError(RuntimeError):
 
 logger = logging.getLogger(__name__)
 
+_EMBED_BATCH_SIZE = 100
+
 
 class _AnswerPayload(BaseModel):
     answer: str
@@ -116,18 +118,26 @@ class GeminiClient:
             return []
 
         normalized_task = _normalize_task_type(task_type)
-        response = self._client.models.embed_content(
-            model=self.embedding_model,
-            contents=texts,
-            config=types.EmbedContentConfig(task_type=normalized_task),
-        )
-        embeddings = getattr(response, "embeddings", None) or []
         vectors: list[list[float]] = []
-        for embedding in embeddings:
-            values = getattr(embedding, "values", None)
-            if not values:
-                raise RuntimeError("Gemini embedding yaniti bos geldi")
-            vectors.append(list(values))
+
+        # Gemini batch embedding endpoint has a hard limit on the number of
+        # requests per call (100). Split large inputs deterministically.
+        for offset in range(0, len(texts), _EMBED_BATCH_SIZE):
+            batch = texts[offset : offset + _EMBED_BATCH_SIZE]
+            response = self._client.models.embed_content(
+                model=self.embedding_model,
+                contents=batch,
+                config=types.EmbedContentConfig(task_type=normalized_task),
+            )
+            embeddings = getattr(response, "embeddings", None) or []
+            if len(embeddings) != len(batch):
+                raise RuntimeError("Gemini embedding yaniti beklenen uzunlukta degil")
+
+            for embedding in embeddings:
+                values = getattr(embedding, "values", None)
+                if not values:
+                    raise RuntimeError("Gemini embedding yaniti bos geldi")
+                vectors.append(list(values))
 
         if len(vectors) != len(texts):
             raise RuntimeError("Gemini embedding yaniti beklenen uzunlukta degil")
@@ -191,4 +201,3 @@ class GeminiClient:
             "all_proxy",
         ):
             os.environ.pop(key, None)
-
