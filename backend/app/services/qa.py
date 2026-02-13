@@ -38,10 +38,12 @@ class QAService:
             [question],
             task_type="retrieval_query",
         )[0]
+        # Fetch more than requested so we still have enough chunks after distance filtering.
+        retrieval_count = top_k * 2
         retrieved = self.vector_store.query(
             query_embedding=query_embedding,
             document_ids=list(indexed_docs.keys()),
-            top_k=max(top_k * 2, top_k),
+            top_k=retrieval_count,
         )
 
         filtered_chunks = [
