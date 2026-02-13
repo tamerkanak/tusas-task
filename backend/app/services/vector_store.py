@@ -49,18 +49,23 @@ class ChromaVectorStore:
         if len(chunks) != len(embeddings):
             raise ValueError("Chunk sayisi ile embedding sayisi esit olmali")
 
+        metadatas: list[dict[str, Any]] = []
+        for chunk in chunks:
+            # Chroma metadata must not contain None values.
+            # Keep "page" optional so image segments or OCR fallbacks don't break ingestion.
+            metadata: dict[str, Any] = {
+                "document_id": chunk.document_id,
+                "filename": chunk.filename,
+                "chunk_index": chunk.chunk_index,
+            }
+            if chunk.page is not None:
+                metadata["page"] = chunk.page
+            metadatas.append(metadata)
+
         self.collection.upsert(
             ids=[chunk.id for chunk in chunks],
             embeddings=embeddings,
-            metadatas=[
-                {
-                    "document_id": chunk.document_id,
-                    "filename": chunk.filename,
-                    "page": chunk.page,
-                    "chunk_index": chunk.chunk_index,
-                }
-                for chunk in chunks
-            ],
+            metadatas=metadatas,
             documents=[chunk.text for chunk in chunks],
         )
 
