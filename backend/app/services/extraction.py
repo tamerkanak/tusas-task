@@ -39,22 +39,33 @@ class DocumentExtractor:
         reader = PdfReader(str(file_path))
 
         for page_index, page in enumerate(reader.pages, start=1):
-            text = (page.extract_text() or "").strip()
-            if len(text) >= self.min_chars_before_ocr:
-                segments.append(ExtractedSegment(page=page_index, source="native", text=text))
-                continue
+            native_text = (page.extract_text() or "").strip()
 
-            image_payload = self._extract_page_image(page)
-            if image_payload is None:
-                continue
+            # Never drop a page that has extractable text, even if it is short.
+            chosen_text = native_text
+            chosen_source = "native"
 
-            image_bytes, mime_type = image_payload
-            ocr_text = self.ai_client.extract_text_from_image(
-                image_bytes=image_bytes,
-                mime_type=mime_type,
-            )
-            if ocr_text:
-                segments.append(ExtractedSegment(page=page_index, source="ocr", text=ocr_text))
+            should_try_ocr = len(native_text) < self.min_chars_before_ocr
+            if should_try_ocr:
+                image_payload = self._extract_page_image(page)
+                if image_payload is not None:
+                    image_bytes, mime_type = image_payload
+                    ocr_text = self.ai_client.extract_text_from_image(
+                        image_bytes=image_bytes,
+                        mime_type=mime_type,
+                    ).strip()
+                    if ocr_text and len(ocr_text) > len(native_text):
+                        chosen_text = ocr_text
+                        chosen_source = "ocr"
+
+            if chosen_text:
+                segments.append(
+                    ExtractedSegment(
+                        page=page_index,
+                        source=chosen_source,
+                        text=chosen_text,
+                    )
+                )
 
         if segments:
             return segments

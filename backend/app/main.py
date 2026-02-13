@@ -5,7 +5,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import models
+from . import models  # noqa: F401
 from .api.documents import router as documents_router
 from .api.health import router as health_router
 from .api.questions import router as questions_router
