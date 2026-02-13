@@ -11,6 +11,8 @@ backend/.env
 *.log
 *.err.log
 *.docx
+Case_Study_*.txt
+ANALIZ_RAPORU.md
 package-lock.json
 
 # Node
