@@ -10,19 +10,21 @@ Bu proje, TUSAS case study isterleri dogrultusunda PDF/JPG/PNG belgelerini yukle
 - Chunk tabanli indeksleme ve vector store (Chroma + otomatik local fallback)
 - Gemini ile grounded soru-cevap
 - Citation zorunlulugu ve no-evidence davranisi
-- FastAPI backend + React frontend
+- FastAPI backend + backend-served statik web UI (no-build)
+- Opsiyonel: React/Vite frontend (gelistirme amacli)
 
 ## Teknoloji Secimi
 
 - Backend: FastAPI, SQLAlchemy, SQLite
 - AI: Gemini (OCR, embedding, QA)
 - Vector DB: Chroma (persistent), hata durumunda Local JSON fallback
-- Frontend: React + Vite + TypeScript
+- Frontend: Backend-served static UI (vanilla JS) + opsiyonel React/Vite (TypeScript)
 - Test: Pytest + mock Gemini/vector store
 
 ## Proje Yapisi
 
 - `backend/app`: API, servisler, veri modelleri
+- `backend/app/static`: Node gerektirmeyen web arayuzu (HTML/JS/CSS)
 - `backend/tests`: mock tabanli backend testleri
 - `frontend/src`: web arayuzu
 - `docs/RUNBOOK.md`: operasyon notlari
@@ -54,7 +56,14 @@ pip install -r backend/requirements.txt -r backend/requirements-dev.txt
 uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+Tarayicidan arayuz:
+
+- `http://localhost:8000`
+
 ### 3) Frontend
+
+Opsiyonel gelistirme arayuzu. Bazi kisitli ortamlarda Node/Vite (esbuild) `spawn EPERM` hatasi verebilir.
+Bu durumda backend-served UI kullanin.
 
 ```bash
 cd frontend
@@ -67,7 +76,7 @@ Varsayilan frontend adresi: `http://localhost:5173`
 ## API Ozeti
 
 - `GET /api/health`
-- `POST /api/documents` (`multipart/form-data`, `files[]`)
+- `POST /api/documents` (`multipart/form-data`, `files`)
 - `GET /api/documents`
 - `POST /api/questions`
 
@@ -111,8 +120,10 @@ Ornek cevap:
 
 ## Test Calistirma
 
+PowerShell:
+
 ```bash
-set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
+$env:PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
 python -m pytest backend/tests -q
 ```
 

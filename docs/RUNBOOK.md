@@ -4,8 +4,11 @@
 
 1. `.env` icine `GEMINI_API_KEY` ekle
 2. Backend'i ayaga kaldir
-3. Frontend'i ayaga kaldir
+3. Tarayicidan arayuzu ac: `http://localhost:8000`
 4. `GET /api/health` ile servis durumunu dogrula
+
+Not:
+- Ayrica `frontend/` altinda opsiyonel React/Vite arayuzu bulunur. Bazi kisitli ortamlarda Node/Vite (esbuild) calismayabilir; bu durumda backend-served UI yeterlidir.
 
 ## Sorun Giderme
 
@@ -13,6 +16,14 @@
 
 - Neden: Gemini anahtari tanimli degil
 - Cozum: `GEMINI_API_KEY` veya `GOOGLE_API_KEY` tanimla
+
+### UI acilmiyor
+
+- Beklenen: `http://localhost:8000` acildiginda statik arayuz gelmeli.
+- Kontrol:
+  - Backend ayakta mi?
+  - Port dogru mu?
+  - `backend/app/static` dosyalari mevcut mu?
 
 ### `vector_store: down`
 

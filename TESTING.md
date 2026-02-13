@@ -6,14 +6,16 @@ Bu dokuman, sistemin nasil test edildigini, hangi senaryolarda nasil davrandigin
 
 Calistirma komutu:
 
+PowerShell:
+
 ```bash
-set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
+$env:PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
 python -m pytest backend/tests -q
 ```
 
 Son durum:
 
-- `4 passed`
+- `9 passed`
 
 Kapsanan testler:
 
@@ -21,6 +23,9 @@ Kapsanan testler:
 2. Grounded answer + citation donusu
 3. Belgede olmayan bilgi icin `no_evidence` davranisi
 4. API key eksikliginde fail-fast (503)
+5. PDF kisa native text icerse bile indexlenebilmeli (OCR esigi yuksek olsa da)
+6. Root path uzerinden backend-served UI gelmeli
+7. Dil tespiti icin temel unit testleri (TR/EN/unknown)
 
 ## 2) Senaryo Bazli Dogrulama
 

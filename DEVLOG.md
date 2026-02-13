@@ -41,6 +41,14 @@
 - Cevrimde gorulen package uyumsuzluklari icin lazy import/fallback yapisi eklendi.
 - `pytest_asyncio` plugin catismasina karsi test komutu notu eklendi.
 
+## 2026-02-13 - Hardening ve Teslim Kalitesi
+
+- PDF extraction icin "kisa native text" durumunda sayfanin kaybolmasina yol acan akis duzeltildi ve regression test eklendi.
+- Dil tespiti heuristigi (TR/EN) duzeltildi; diacritics + token bazli yaklasimla temel unit testler eklendi.
+- Gemini entegrasyonu guncel `google-genai` SDK uzerine tasindi (structured JSON output + batch embedding hedefi).
+- Node/Vite calismayan ortamlarda kullanilabilirlik icin backend'den statik UI servis edilmesi eklendi ve testlendi.
+- README/TESTING/RUNBOOK dokumanlari PowerShell uyumlu ve guncel akisi yansitacak sekilde guncellendi.
+
 ## Bugun tekrar baslasam farkli yapacaklarim
 
 - Baslangicta AI, vector store ve storage icin soyut arayuzleri daha erken cikartirdim.
