@@ -148,15 +148,28 @@ class DocumentService:
 
     @staticmethod
     def _detect_language(text: str) -> str:
-        normalized = f" {text.lower()} "
+        normalized = f" {text.casefold()} "
         if len(normalized.strip()) < 20:
             return "unknown"
 
-        turkish_tokens = [" ve ", " bir ", " icin ", " olarak ", " ile ", " de ", " da "]
+        turkish_tokens = [
+            " ve ",
+            " bir ",
+            " icin ",
+            " için ",
+            " olarak ",
+            " ile ",
+            " de ",
+            " da ",
+        ]
         english_tokens = [" the ", " and ", " for ", " with ", " this ", " that ", " is "]
 
         turkish_score = sum(normalized.count(token) for token in turkish_tokens)
-        turkish_score += sum(normalized.count(char) for char in "cgisou")
+        # Turkish diacritics: \u00e7 \u011f \u0131 \u00f6 \u015f \u00fc
+        turkish_score += 2 * sum(
+            normalized.count(char)
+            for char in ("\u00e7", "\u011f", "\u0131", "\u00f6", "\u015f", "\u00fc")
+        )
 
         english_score = sum(normalized.count(token) for token in english_tokens)
 
