@@ -9,6 +9,9 @@ class FakeGeminiClient:
     def extract_text_from_image(self, image_bytes: bytes, mime_type: str) -> str:
         return "Mock OCR metni"
 
+    def extract_text_from_pdf(self, pdf_bytes: bytes) -> str:
+        return "Mock PDF metni"
+
     def embed_texts(self, texts: list[str], *, task_type: str = "retrieval_document") -> list[list[float]]:
         return [self._vectorize(text) for text in texts]
 

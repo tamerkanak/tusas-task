@@ -11,7 +11,7 @@ from .repositories import ChunkRepository, DocumentRepository, SegmentRepository
 from .services.chunking import ChunkBuilder
 from .services.documents import DocumentService
 from .services.extraction import DocumentExtractor
-from .services.gemini import GeminiClient, MissingApiKeyError
+from .services.gemini import GeminiClient, MissingApiKeyError, MissingDependencyError
 from .services.qa import QAService
 from .services.storage import FileStorageService
 from .services.vector_store import VectorStoreProtocol
@@ -67,7 +67,7 @@ def get_gemini_client(request: Request, settings: Settings = Depends(get_setting
             embedding_model=settings.gemini_embedding_model,
             use_system_proxy=settings.gemini_use_system_proxy,
         )
-    except MissingApiKeyError as exc:
+    except (MissingApiKeyError, MissingDependencyError) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     request.app.state.gemini_client = client
