@@ -48,6 +48,8 @@ Opsiyonel ama onemli:
 - `GEMINI_USE_SYSTEM_PROXY=false` (varsayilan). Sistem proxy'si hataliysa Gemini baglantisini korur.
 - `GEMINI_MODEL=gemini-3-flash-preview` (Gemini 3 Flash kullanimi)
 - `GEMINI_EMBED_MODEL=gemini-embedding-001` (onerilen embedding modeli)
+- `MAX_FILES_PER_REQUEST=10` (varsayilan). Tek istekte yuklenebilecek dosya sayisi limiti.
+- `MAX_UPLOAD_FILE_SIZE_MB=50` (varsayilan). Tek dosya icin boyut limiti (DoS riskini azaltir).
 
 ### 2) Backend
 
