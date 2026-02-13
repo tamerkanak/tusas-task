@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { askQuestion, fetchDocuments, uploadDocuments } from "./api";
 import type { AskResponse, DocumentSummary, UploadResponse } from "./types";
 
@@ -112,8 +112,7 @@ function App() {
           <div className="workspace-grid">
             <section className="upload-section">
               <UploadArea
-                onUploadStart={() => { }}
-                onUploadComplete={() => { }}
+                selectedFiles={selectedFiles}
                 onError={(msg) => setErrorMessage(msg)}
                 isUploading={uploading}
                 onFilesSelected={(files) => setSelectedFiles(files)}
@@ -126,6 +125,28 @@ function App() {
                 >
                   Yüklemeyi Başlat
                 </button>
+              )}
+
+              {uploadResult && (
+                <div className="upload-result glass-panel">
+                  <div className="upload-result-header">
+                    <span>Son yükleme</span>
+                    <span className="upload-result-metrics">
+                      <span className="ok">✅ {uploadResult.accepted_files.length} kabul</span>
+                      <span className="bad">❌ {uploadResult.rejected_files.length} red</span>
+                    </span>
+                  </div>
+
+                  {uploadResult.rejected_files.length > 0 && (
+                    <ul className="upload-rejections">
+                      {uploadResult.rejected_files.map((f, i) => (
+                        <li key={`${f.filename}-${i}`}>
+                          <span className="file">{f.filename}</span>: {f.reason}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               )}
             </section>
 
@@ -204,16 +225,49 @@ function App() {
           justify-content: space-between;
           align-items: center;
         }
-        .start-upload-btn {
-          margin-top: 1rem;
-          width: 100%;
-          justify-content: center;
-          animation: fadeIn 0.3s;
-        }
-        
-        @media (min-width: 1200px) {
-           .workspace-grid {
-             grid-template-columns: 350px 1fr;
+         .start-upload-btn {
+           margin-top: 1rem;
+           width: 100%;
+           justify-content: center;
+           animation: fadeIn 0.3s;
+         }
+         .upload-result {
+           margin-top: 1rem;
+           padding: 1rem;
+         }
+         .upload-result-header {
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+           margin-bottom: 0.75rem;
+           color: var(--color-text-muted);
+           font-size: 0.85rem;
+           text-transform: uppercase;
+           letter-spacing: 0.06em;
+         }
+         .upload-result-metrics {
+           display: flex;
+           gap: 0.75rem;
+         }
+         .upload-result .ok { color: var(--color-success); }
+         .upload-result .bad { color: var(--color-error); }
+         .upload-rejections {
+           margin: 0;
+           padding-left: 1.2rem;
+           font-size: 0.9rem;
+           color: var(--color-text-muted);
+         }
+         .upload-rejections li {
+           margin: 0.25rem 0;
+         }
+         .upload-rejections .file {
+           color: var(--color-text);
+           font-weight: 600;
+         }
+         
+         @media (min-width: 1200px) {
+            .workspace-grid {
+              grid-template-columns: 350px 1fr;
              grid-template-rows: 1fr;
            }
         }
@@ -223,4 +277,3 @@ function App() {
 }
 
 export default App;
-

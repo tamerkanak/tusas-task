@@ -1,23 +1,23 @@
 import { useState, useCallback } from "react";
-import type { UploadResponse } from "../types";
 
 interface UploadAreaProps {
-  onUploadStart: () => void;
-  onUploadComplete: (result: UploadResponse) => void;
+  selectedFiles: File[];
   onError: (msg: string) => void;
   isUploading: boolean;
   onFilesSelected: (files: File[]) => void;
 }
 
 export function UploadArea({
-  onUploadStart,
-  onUploadComplete,
+  selectedFiles,
   onError,
   isUploading,
   onFilesSelected,
 }: UploadAreaProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [localFiles, setLocalFiles] = useState<File[]>([]);
+
+  const filterSupported = useCallback((files: File[]) => {
+    return files.filter((f) => /\.(pdf|jpg|jpeg|png)$/i.test(f.name));
+  }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -33,26 +33,33 @@ export function UploadArea({
     (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragging(false);
-      const files = Array.from(e.dataTransfer.files).filter((f) =>
-        /\.(pdf|jpg|jpeg|png)$/i.test(f.name)
-      );
+      const incoming = Array.from(e.dataTransfer.files);
+      const files = filterSupported(incoming);
+      if (incoming.length > 0 && files.length === 0) {
+        onError("Sadece PDF, JPG ve PNG dosyalari desteklenir.");
+      }
       if (files.length > 0) {
-        setLocalFiles(files);
         onFilesSelected(files);
       }
     },
-    [onFilesSelected]
+    [filterSupported, onError, onFilesSelected]
   );
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files) {
-        const files = Array.from(e.target.files);
-        setLocalFiles(files);
-        onFilesSelected(files);
+        const incoming = Array.from(e.target.files);
+        const files = filterSupported(incoming);
+        if (incoming.length > 0 && files.length === 0) {
+          onError("Sadece PDF, JPG ve PNG dosyalari desteklenir.");
+        }
+        if (files.length > 0) {
+          onFilesSelected(files);
+        }
+        e.target.value = "";
       }
     },
-    [onFilesSelected]
+    [filterSupported, onError, onFilesSelected]
   );
 
   return (
@@ -100,16 +107,16 @@ export function UploadArea({
               <div className="progress-fill shimmer"></div>
             </div>
           </div>
-        ) : localFiles.length > 0 ? (
-          <div className="selected-files">
-            <h3>{localFiles.length} Dosya Seçildi</h3>
-            <ul className="file-preview-list">
-              {localFiles.map((f, i) => (
-                <li key={i}>{f.name}</li>
-              ))}
-            </ul>
-            <p className="hint">Yüklemek için butona basın</p>
-          </div>
+        ) : selectedFiles.length > 0 ? (
+           <div className="selected-files">
+             <h3>{selectedFiles.length} Dosya Seçildi</h3>
+             <ul className="file-preview-list">
+               {selectedFiles.map((f, i) => (
+                 <li key={i}>{f.name}</li>
+               ))}
+             </ul>
+             <p className="hint">Yüklemek için butona basın</p>
+           </div>
         ) : (
           <div className="drop-prompt">
             <h3>Belgeleri Buraya Sürükleyin</h3>
