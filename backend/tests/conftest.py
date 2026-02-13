@@ -29,6 +29,8 @@ def settings(tmp_path: Path) -> Settings:
         chunk_size=220,
         chunk_overlap=40,
         retrieval_max_distance=0.5,
+        max_files_per_request=10,
+        max_upload_file_size_bytes=50 * 1024 * 1024,
     )
 
 

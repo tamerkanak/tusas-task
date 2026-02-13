@@ -106,6 +106,8 @@ def test_missing_api_key_fails_fast_on_upload(tmp_path) -> None:
         chunk_size=220,
         chunk_overlap=40,
         retrieval_max_distance=0.5,
+        max_files_per_request=10,
+        max_upload_file_size_bytes=50 * 1024 * 1024,
     )
 
     app = create_app(settings=settings, vector_store=FakeVectorStore())
@@ -139,6 +141,8 @@ def test_upload_indexes_short_native_pdf_text_even_when_ocr_threshold_high(tmp_p
         chunk_size=220,
         chunk_overlap=40,
         retrieval_max_distance=0.5,
+        max_files_per_request=10,
+        max_upload_file_size_bytes=50 * 1024 * 1024,
     )
 
     app = create_app(
@@ -163,3 +167,96 @@ def test_root_serves_static_ui(client: TestClient) -> None:
     response = client.get("/")
     assert response.status_code == 200
     assert "TUSAS Case Study MVP" in response.text
+
+
+def test_upload_rejects_empty_file(client: TestClient) -> None:
+    response = client.post(
+        "/api/documents",
+        files=[("files", ("empty.pdf", b"", "application/pdf"))],
+    )
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["accepted_files"] == []
+    assert payload["rejected_files"]
+    assert payload["rejected_files"][0]["filename"] == "empty.pdf"
+    assert payload["rejected_files"][0]["reason"] == "Dosya bos"
+
+
+def test_upload_rejects_too_many_files(client: TestClient, settings: Settings) -> None:
+    good_pdf = create_pdf_bytes()
+    files = [
+        ("files", (f"doc-{i}.pdf", good_pdf, "application/pdf"))
+        for i in range(settings.max_files_per_request + 1)
+    ]
+
+    response = client.post("/api/documents", files=files)
+    assert response.status_code == 400
+    assert str(settings.max_files_per_request) in response.json()["detail"]
+
+
+def test_upload_rejects_too_large_file(tmp_path) -> None:
+    data_dir = tmp_path / "size_limit"
+    settings = Settings(
+        app_name="SizeLimit",
+        environment="test",
+        api_prefix="/api",
+        data_dir=data_dir,
+        upload_dir=data_dir / "uploads",
+        chroma_dir=data_dir / "chroma",
+        database_path=data_dir / "app.db",
+        gemini_api_key="test-key",
+        gemini_model="gemini-test",
+        gemini_embedding_model="models/text-embedding-004",
+        gemini_use_system_proxy=False,
+        pdf_min_chars_before_ocr=20,
+        chunk_size=220,
+        chunk_overlap=40,
+        retrieval_max_distance=0.5,
+        max_files_per_request=10,
+        max_upload_file_size_bytes=100,
+    )
+
+    app = create_app(
+        settings=settings,
+        vector_store=FakeVectorStore(),
+        gemini_client=FakeGeminiClient(),
+    )
+    client = TestClient(app)
+
+    good_pdf = create_pdf_bytes()
+    response = client.post(
+        "/api/documents",
+        files=[("files", ("ankara.pdf", good_pdf, "application/pdf"))],
+    )
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["accepted_files"] == []
+    assert payload["rejected_files"]
+    assert "cok buyuk" in payload["rejected_files"][0]["reason"].lower()
+
+
+def test_ask_ignores_invalid_document_ids(client: TestClient) -> None:
+    good_pdf = create_pdf_bytes()
+    upload_response = client.post(
+        "/api/documents",
+        files=[("files", ("ankara.pdf", good_pdf, "application/pdf"))],
+    )
+    assert upload_response.status_code == 200
+    document_id = upload_response.json()["document_ids"][0]
+
+    ask_response = client.post(
+        "/api/questions",
+        json={
+            "question": "Belgede Ankara ile ilgili hangi bilgi geciyor?",
+            "document_ids": [document_id, "does-not-exist"],
+            "top_k": 5,
+        },
+    )
+    assert ask_response.status_code == 200
+    payload = ask_response.json()
+
+    assert payload["mode"] == "grounded_answer"
+    assert payload["citations"]
+    assert "Ankara" in payload["answer"]

@@ -30,6 +30,7 @@ class DocumentService:
         vector_store: VectorStoreProtocol,
         ai_client: GeminiClient,
         allowed_extensions: set[str],
+        max_upload_file_size_bytes: int,
     ) -> None:
         self.repository = repository
         self.segment_repository = segment_repository
@@ -40,6 +41,7 @@ class DocumentService:
         self.vector_store = vector_store
         self.ai_client = ai_client
         self.allowed_extensions = {value.lower() for value in allowed_extensions}
+        self.max_upload_file_size_bytes = max(1, int(max_upload_file_size_bytes))
 
     async def upload_documents(self, files: list[UploadFile]) -> UploadResponse:
         document_ids: list[str] = []
@@ -56,7 +58,21 @@ class DocumentService:
                 )
                 continue
 
-            content = await file.read()
+            content = await self._read_upload_file_limited(
+                file,
+                max_bytes=self.max_upload_file_size_bytes,
+            )
+            if content is None:
+                rejected_files.append(
+                    RejectedFile(
+                        filename=filename,
+                        reason=(
+                            "Dosya cok buyuk "
+                            f"(max {self.max_upload_file_size_bytes // (1024 * 1024)} MB)"
+                        ),
+                    )
+                )
+                continue
             if not content:
                 rejected_files.append(RejectedFile(filename=filename, reason="Dosya bos"))
                 continue
@@ -131,6 +147,32 @@ class DocumentService:
             accepted_files=accepted_files,
             rejected_files=rejected_files,
         )
+
+    @staticmethod
+    async def _read_upload_file_limited(file: UploadFile, *, max_bytes: int) -> bytes | None:
+        # Read incrementally to avoid loading arbitrarily large uploads into memory.
+        buffer = bytearray()
+        remaining = max(1, int(max_bytes))
+        chunk_size = min(1024 * 1024, remaining)
+
+        while True:
+            chunk = await file.read(chunk_size)
+            if not chunk:
+                break
+
+            if len(chunk) > remaining:
+                return None
+
+            buffer.extend(chunk)
+            remaining -= len(chunk)
+            if remaining <= 0:
+                # Exactly at the limit: allow, but reject if the upload continues.
+                chunk = await file.read(1)
+                if chunk:
+                    return None
+                break
+
+        return bytes(buffer)
 
     def list_documents(self) -> list[DocumentSummary]:
         records = self.repository.list_all()

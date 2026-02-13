@@ -22,6 +22,8 @@ class Settings:
     chunk_size: int
     chunk_overlap: int
     retrieval_max_distance: float
+    max_files_per_request: int
+    max_upload_file_size_bytes: int
 
     @property
     def database_url(self) -> str:
@@ -62,6 +64,15 @@ class Settings:
             chunk_size=int(os.getenv("CHUNK_SIZE", "900")),
             chunk_overlap=int(os.getenv("CHUNK_OVERLAP", "180")),
             retrieval_max_distance=float(os.getenv("RETRIEVAL_MAX_DISTANCE", "0.45")),
+            max_files_per_request=_read_int(
+                os.getenv("MAX_FILES_PER_REQUEST"),
+                default=10,
+            ),
+            max_upload_file_size_bytes=_read_upload_size_bytes(
+                bytes_raw=os.getenv("MAX_UPLOAD_FILE_SIZE_BYTES"),
+                mb_raw=os.getenv("MAX_UPLOAD_FILE_SIZE_MB"),
+                default_bytes=50 * 1024 * 1024,
+            ),
         )
 
     def ensure_directories(self) -> None:
@@ -76,6 +87,23 @@ def _read_bool(raw_value: str | None, *, default: bool) -> bool:
 
     normalized = raw_value.strip().lower()
     return normalized in {"1", "true", "yes", "on"}
+
+
+def _read_int(raw_value: str | None, *, default: int) -> int:
+    if raw_value is None:
+        return default
+    try:
+        return int(raw_value.strip())
+    except Exception:
+        return default
+
+
+def _read_upload_size_bytes(*, bytes_raw: str | None, mb_raw: str | None, default_bytes: int) -> int:
+    if bytes_raw is not None:
+        return max(1, _read_int(bytes_raw, default=default_bytes))
+    if mb_raw is not None:
+        return max(1, _read_int(mb_raw, default=(default_bytes // (1024 * 1024))) * 1024 * 1024)
+    return default_bytes
 
 
 def _load_dotenv(dotenv_path: Path) -> None:

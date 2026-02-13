@@ -109,6 +109,7 @@ def get_document_service(
         vector_store=vector_store,
         ai_client=ai_client,
         allowed_extensions=settings.allowed_extensions,
+        max_upload_file_size_bytes=settings.max_upload_file_size_bytes,
     )
 
 
