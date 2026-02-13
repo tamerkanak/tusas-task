@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TUSAS Belge Analiz ve Soru-Cevap</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <p class="badge">TUSAS Case Study MVP</p>
+        <h1>Belge Analiz ve Soru-Cevap Sistemi</h1>
+        <p>
+          PDF/JPG/PNG dosyalari yukleyin, sistem metinleri indexlesin ve dogal dil
+          sorularinizi belge baglamina dayali yanitlasin.
+        </p>
+        <div class="health" id="health"></div>
+      </section>
+
+      <div class="alert error hidden" id="error"></div>
+
+      <section class="panel">
+        <header>
+          <div>
+            <h2>1) Belge Yukleme</h2>
+            <p>Desteklenen formatlar: PDF, JPG, PNG</p>
+          </div>
+        </header>
+
+        <div class="upload-row">
+          <input
+            type="file"
+            multiple
+            accept=".pdf,.jpg,.jpeg,.png"
+            id="fileInput"
+          />
+          <button type="button" id="uploadBtn">Dosyalari Yukle</button>
+        </div>
+
+        <ul class="compact-list" id="selectedFiles"></ul>
+
+        <div class="result-grid hidden" id="uploadResult">
+          <article>
+            <h3>Kabul Edilenler</h3>
+            <ul class="compact-list" id="acceptedList"></ul>
+          </article>
+          <article>
+            <h3>Reddedilenler</h3>
+            <ul class="compact-list" id="rejectedList"></ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <header>
+          <div>
+            <h2>2) Belge Listesi</h2>
+            <p>Yalnizca indexed belgeler secilebilir.</p>
+          </div>
+          <button type="button" class="ghost" id="refreshBtn">Yenile</button>
+        </header>
+
+        <div class="doc-grid" id="docGrid"></div>
+      </section>
+
+      <section class="panel">
+        <header>
+          <div>
+            <h2>3) Soru-Cevap</h2>
+            <p>Citation olmadan cevap kabul edilmez.</p>
+          </div>
+        </header>
+
+        <textarea
+          id="questionInput"
+          rows="5"
+          placeholder="Ornek: Belgede merkez hangi sehirde?"
+        ></textarea>
+
+        <div class="ask-row">
+          <button type="button" id="askBtn">Soru Sor</button>
+        </div>
+
+        <article class="qa-result hidden" id="qaResult">
+          <div class="mode-line" id="qaMeta"></div>
+          <p class="answer" id="qaAnswer"></p>
+
+          <h3>Citations</h3>
+          <ul class="compact-list" id="qaCitations"></ul>
+        </article>
+      </section>
+
+      <footer class="footer">
+        <p>
+          API: <code>/api</code> · Swagger: <code>/docs</code>
+        </p>
+      </footer>
+    </main>
+
+    <script src="/static/app.js" type="module"></script>
+  </body>
+</html>
+

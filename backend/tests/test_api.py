@@ -157,3 +157,9 @@ def test_upload_indexes_short_native_pdf_text_even_when_ocr_threshold_high(tmp_p
     payload = upload_response.json()
     assert payload["accepted_files"]
     assert payload["accepted_files"][0]["status"] == "indexed"
+
+
+def test_root_serves_static_ui(client: TestClient) -> None:
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "TUSAS Case Study MVP" in response.text

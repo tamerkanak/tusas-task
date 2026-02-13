@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from . import models  # noqa: F401
 from .api.documents import router as documents_router
@@ -78,6 +81,14 @@ def create_app(
     app.include_router(health_router, prefix=settings.api_prefix)
     app.include_router(documents_router, prefix=settings.api_prefix)
     app.include_router(questions_router, prefix=settings.api_prefix)
+
+    static_dir = Path(__file__).resolve().parent / "static"
+    if static_dir.is_dir():
+        app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+        @app.get("/", include_in_schema=False)
+        def ui_index() -> FileResponse:
+            return FileResponse(static_dir / "index.html")
 
     return app
 
