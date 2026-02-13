@@ -2,19 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { askQuestion, fetchDocuments, uploadDocuments } from "./api";
 import type { AskResponse, DocumentSummary, UploadResponse } from "./types";
 
-function toLocalDate(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.valueOf())) {
-    return iso;
-  }
-  return date.toLocaleString("tr-TR");
-}
+import { DocumentList } from "./components/DocumentList";
+import { UploadArea } from "./components/UploadArea";
+import { ChatInterface } from "./components/ChatInterface";
 
 function App() {
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
-  const [question, setQuestion] = useState("");
 
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
   const [qaResult, setQaResult] = useState<AskResponse | null>(null);
@@ -23,11 +18,6 @@ function App() {
   const [uploading, setUploading] = useState(false);
   const [asking, setAsking] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const indexedDocuments = useMemo(
-    () => documents.filter((doc) => doc.status === "indexed"),
-    [documents],
-  );
 
   async function refreshDocuments(): Promise<void> {
     try {
@@ -46,10 +36,7 @@ function App() {
   }, []);
 
   async function handleUpload(): Promise<void> {
-    if (!selectedFiles.length) {
-      setErrorMessage("Lutfen en az bir dosya secin.");
-      return;
-    }
+    if (!selectedFiles.length) return;
 
     setErrorMessage(null);
     setUploadResult(null);
@@ -67,14 +54,9 @@ function App() {
     }
   }
 
-  async function handleAsk(): Promise<void> {
-    if (!question.trim()) {
-      setErrorMessage("Soru alani bos birakilamaz.");
-      return;
-    }
-
+  async function handleAsk(question: string): Promise<void> {
     if (!selectedDocumentIds.length) {
-      setErrorMessage("Soru icin en az bir indexed belge secin.");
+      setErrorMessage("Soru sormak için en az bir belge seçmelisiniz.");
       return;
     }
 
@@ -95,159 +77,150 @@ function App() {
     }
   }
 
+  const toggleDocumentSelect = (id: string) => {
+    setSelectedDocumentIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
   return (
-    <main className="page">
-      <section className="hero">
-        <p className="badge">TUSAS Case Study MVP</p>
-        <h1>Belge Analiz ve Soru-Cevap Sistemi</h1>
-        <p>
-          PDF/JPG/PNG dosyalari yukleyin, sistem metinleri indexlesin ve dogal dil
-          sorularinizi belge baglamina dayali yanitlasin.
-        </p>
-      </section>
+    <div className="app-container">
+      <DocumentList
+        documents={documents}
+        selectedIds={selectedDocumentIds}
+        onToggleSelect={toggleDocumentSelect}
+        isLoading={loadingDocuments}
+        onRefresh={() => void refreshDocuments()}
+      />
 
-      {errorMessage && <div className="alert error">Hata: {errorMessage}</div>}
-
-      <section className="panel">
-        <header>
-          <h2>1) Belge Yukleme</h2>
-          <p>Desteklenen formatlar: PDF, JPG, PNG</p>
-        </header>
-
-        <div className="upload-row">
-          <input
-            type="file"
-            multiple
-            accept=".pdf,.jpg,.jpeg,.png"
-            onChange={(event) => {
-              const picked = event.target.files ? Array.from(event.target.files) : [];
-              setSelectedFiles(picked);
-            }}
-          />
-          <button type="button" disabled={uploading} onClick={() => void handleUpload()}>
-            {uploading ? "Yukleniyor..." : "Dosyalari Yukle"}
-          </button>
-        </div>
-
-        {selectedFiles.length > 0 && (
-          <ul className="compact-list">
-            {selectedFiles.map((file) => (
-              <li key={`${file.name}-${file.size}`}>{file.name}</li>
-            ))}
-          </ul>
-        )}
-
-        {uploadResult && (
-          <div className="result-grid">
-            <article>
-              <h3>Kabul Edilenler</h3>
-              <ul className="compact-list">
-                {uploadResult.accepted_files.length === 0 && <li>-</li>}
-                {uploadResult.accepted_files.map((item) => (
-                  <li key={item.document_id}>
-                    {item.filename} ({item.status})
-                  </li>
-                ))}
-              </ul>
-            </article>
-            <article>
-              <h3>Reddedilenler</h3>
-              <ul className="compact-list">
-                {uploadResult.rejected_files.length === 0 && <li>-</li>}
-                {uploadResult.rejected_files.map((item) => (
-                  <li key={`${item.filename}-${item.reason}`}>
-                    {item.filename}: {item.reason}
-                  </li>
-                ))}
-              </ul>
-            </article>
+      <main className="main-content">
+        <header className="top-bar">
+          <div className="brand">
+            <h1>TUSAŞ <span className="highlight">Analiz</span></h1>
+            <p className="subtitle">Yapay Zeka Destekli Belge Asistanı</p>
           </div>
-        )}
-      </section>
-
-      <section className="panel">
-        <header>
-          <h2>2) Belge Listesi</h2>
-          <button type="button" className="ghost" onClick={() => void refreshDocuments()}>
-            {loadingDocuments ? "Yenileniyor..." : "Yenile"}
-          </button>
         </header>
 
-        <div className="doc-grid">
-          {documents.length === 0 && <p>Henuz belge yok.</p>}
-          {documents.map((doc) => {
-            const isChecked = selectedDocumentIds.includes(doc.id);
-            const canSelect = doc.status === "indexed";
-
-            return (
-              <label key={doc.id} className={`doc-card ${canSelect ? "" : "disabled"}`}>
-                <input
-                  type="checkbox"
-                  disabled={!canSelect}
-                  checked={isChecked}
-                  onChange={(event) => {
-                    if (event.target.checked) {
-                      setSelectedDocumentIds((prev) => [...prev, doc.id]);
-                    } else {
-                      setSelectedDocumentIds((prev) => prev.filter((id) => id !== doc.id));
-                    }
-                  }}
-                />
-                <div>
-                  <strong>{doc.filename}</strong>
-                  <p>ID: {doc.id.slice(0, 12)}...</p>
-                  <p>Tip: {doc.file_type.toUpperCase()}</p>
-                  <p>Dil: {doc.language}</p>
-                  <p>Durum: {doc.status}</p>
-                  <p>Olusturma: {toLocalDate(doc.created_at)}</p>
-                </div>
-              </label>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="panel">
-        <header>
-          <h2>3) Soru-Cevap</h2>
-          <p>Yalnizca indexed belgeler secilebilir.</p>
-        </header>
-
-        <textarea
-          value={question}
-          onChange={(event) => setQuestion(event.target.value)}
-          placeholder="Ornek: Belgede TUSAS merkezinin hangi sehirde oldugu yaziyor mu?"
-          rows={5}
-        />
-
-        <button type="button" disabled={asking} onClick={() => void handleAsk()}>
-          {asking ? "Sorgulaniyor..." : "Soru Sor"}
-        </button>
-
-        {qaResult && (
-          <article className="qa-result">
-            <div className="mode-line">
-              <span className={`mode ${qaResult.mode}`}>{qaResult.mode}</span>
-              <span>Confidence: {qaResult.confidence}</span>
-              <span>Used Chunks: {qaResult.used_chunks}</span>
+        <div className="workspace">
+          {errorMessage && (
+            <div className="error-banner">
+              ⚠️ {errorMessage}
+              <button onClick={() => setErrorMessage(null)}>✕</button>
             </div>
-            <p className="answer">{qaResult.answer}</p>
+          )}
 
-            <h3>Citations</h3>
-            <ul className="compact-list">
-              {qaResult.citations.length === 0 && <li>-</li>}
-              {qaResult.citations.map((citation) => (
-                <li key={citation.chunk_id}>
-                  <strong>{citation.filename}</strong>
-                  {citation.page ? ` (sayfa ${citation.page})` : ""} - {citation.snippet}
-                </li>
-              ))}
-            </ul>
-          </article>
-        )}
-      </section>
-    </main>
+          <div className="workspace-grid">
+            <section className="upload-section">
+              <UploadArea
+                onUploadStart={() => { }}
+                onUploadComplete={() => { }}
+                onError={(msg) => setErrorMessage(msg)}
+                isUploading={uploading}
+                onFilesSelected={(files) => setSelectedFiles(files)}
+              />
+
+              {selectedFiles.length > 0 && !uploading && (
+                <button
+                  className="btn btn-primary start-upload-btn"
+                  onClick={() => void handleUpload()}
+                >
+                  Yüklemeyi Başlat
+                </button>
+              )}
+            </section>
+
+            <section className="chat-section">
+              <ChatInterface
+                onAsk={handleAsk}
+                isAsking={asking}
+                result={qaResult}
+                selectedDocCount={selectedDocumentIds.length}
+              />
+            </section>
+          </div>
+        </div>
+      </main>
+
+      <style>{`
+        .main-content {
+          display: flex;
+          flex-direction: column;
+          height: 100vh;
+          overflow: hidden;
+          padding: 1.5rem;
+          gap: 1.5rem;
+        }
+        .top-bar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .brand h1 {
+          margin: 0;
+          font-weight: 700;
+          letter-spacing: -0.05em;
+        }
+        .highlight {
+          color: var(--color-primary);
+        }
+        .subtitle {
+          margin: 0;
+          font-size: 0.8rem;
+          color: var(--color-text-muted);
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+        }
+        .workspace {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+          overflow: hidden;
+        }
+        .workspace-grid {
+          display: grid;
+          grid-template-rows: auto 1fr;
+          gap: 1.5rem;
+          height: 100%;
+          min-height: 0; /* Ensure grid itself doesn't overflow */
+        }
+        .upload-section {
+           min-height: 0;
+           display: flex;
+           flex-direction: column;
+        }
+        .chat-section {
+           min-height: 0; /* Critical for grid item scrolling */
+           overflow: hidden;
+           display: flex;
+           flex-direction: column;
+        }
+        .error-banner {
+          background: rgba(239, 68, 68, 0.2);
+          border: 1px solid var(--color-error);
+          padding: 0.8rem;
+          border-radius: var(--radius-md);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .start-upload-btn {
+          margin-top: 1rem;
+          width: 100%;
+          justify-content: center;
+          animation: fadeIn 0.3s;
+        }
+        
+        @media (min-width: 1200px) {
+           .workspace-grid {
+             grid-template-columns: 350px 1fr;
+             grid-template-rows: 1fr;
+           }
+        }
+      `}</style>
+    </div>
   );
 }
 
 export default App;
+
