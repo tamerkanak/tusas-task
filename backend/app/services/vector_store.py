@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
@@ -34,6 +35,9 @@ class VectorStoreProtocol(Protocol):
 
 class ChromaVectorStore:
     def __init__(self, persist_dir: Path, collection_name: str = "document_chunks") -> None:
+        # Chroma product telemetry can break noisily due to dependency mismatches (posthog SDK)
+        # and is not needed for this case study MVP.
+        os.environ.setdefault("ANONYMIZED_TELEMETRY", "False")
         import chromadb
 
         self.client: Any = chromadb.PersistentClient(path=str(persist_dir))

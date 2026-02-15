@@ -46,13 +46,24 @@ class QAService:
             top_k=retrieval_count,
         )
 
-        filtered_chunks = [
-            chunk for chunk in retrieved if chunk.distance <= self.retrieval_max_distance
-        ][:top_k]
-
-        if not filtered_chunks:
-            logger.info("QA no_evidence: retrieval sonucu esik altinda")
+        if not retrieved:
+            logger.info("QA no_evidence: retrieval hic sonuc dondurmedi")
             return self._no_evidence_response()
+
+        # Prefer high-quality chunks within the configured distance threshold, but avoid false
+        # negatives by falling back to the best-ranked chunks when everything is filtered out.
+        passing_chunks = [chunk for chunk in retrieved if chunk.distance <= self.retrieval_max_distance]
+        filtered_chunks = (passing_chunks[:top_k] if passing_chunks else retrieved[:top_k])
+
+        if not passing_chunks:
+            distances = [chunk.distance for chunk in retrieved]
+            min_distance = min(distances) if distances else float("inf")
+            logger.info(
+                "QA retrieval threshold filtered all chunks (min_distance=%.3f > %.3f). "
+                "Proceeding with top_k fallback.",
+                min_distance,
+                self.retrieval_max_distance,
+            )
 
         context_items = []
         citation_map: dict[str, Citation] = {}
